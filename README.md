@@ -31,6 +31,3 @@ The project is preconfigured with a simple development web server and nodemon. T
     nodemon 
 
 
-### Project Structure
-
-*Under Construction*
