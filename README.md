@@ -1,4 +1,4 @@
-This project is an application skeleton for a typical [Node.js](https://nodejs.org/) web app.
+This project is an application skeleton for a typical Node.js web app.
 
 
 ## Getting Started
