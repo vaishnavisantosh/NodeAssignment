@@ -7,10 +7,10 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import User from '../model/User.model';
-import UserActivity from '../model/UserActivity.model';
 import { loginValidation, registrationValidation } from '../lib/validator';
 import UserServices from '../lib/userServices';
 
+const userServices = new UserServices();
 dotenv.config({ path: './.env' });
 
 exports.SignUp = async (req, res) => {
@@ -39,7 +39,7 @@ exports.SignUp = async (req, res) => {
 
 exports.SignIn = async (req, res) => {
   try {
-    let isAdmin;
+    // let isAdmin;
     const { error } = loginValidation(req.body);
     if (error) return res.status(400).send(error.details[0].message);
     const user = await User.findOne({ email: req.body.email });
@@ -48,41 +48,29 @@ exports.SignIn = async (req, res) => {
     const validPass = await bcrypt.compare(req.body.password, user.password);
     if (!validPass) return res.status(400).send('incorrect password!!');
 
-    if (user && user.firstName === 'admin') {
-      isAdmin = true;
-    } else {
-      isAdmin = false;
-    }
+    const isAdmin = user && user.firstName === 'admin' ? 1 : 0;
 
-    const loggedUser = await UserServices.saveLoggedInUser(req, res, user);
+    const loggedUser = await userServices.SaveLoggedInUser(req, res, user);
 
-    const token = jwt.sign({ _id: user._id }, process.env.TOKENSECRET);
+    const token = jwt.sign({ _id: user._id, admin: isAdmin }, process.env.TOKENSECRET);
     res.header('authentication-token', token);
     return res.send(`logged in!! ${loggedUser}  authentication-token: ${token}`);
   } catch (err) {
-    return res.send(err);
+    return res.send('something went wrong');
   }
 };
 
 exports.ShowAllUser = async (req, res) => {
-  let users;
+  try {
+    const token = req.headers.authorization;
+    if (!token) return res.status(401).send('Access denied');
 
-  const token = req.headers.authorization;
-  if (!token) return res.status(401).send('Access denied');
-
-  const decodedToken = jwt.verify(req.headers.authorization, process.env.TOKENSECRET);
-
-
-  if (decodedToken.isAdmin) {
-    users = User.find();
-  } else {
-    users = User.find({ _id: decodedToken._id });
+    const decodedToken = jwt.verify(req.headers.authorization, process.env.TOKENSECRET);
+    const users = await userServices.ShowUsers(req, res, decodedToken);
+    return res.status(200).send(users);
+  } catch (err) {
+    return res.send('invalid Token');
   }
-
-  if (users) {
-    return res.res.status(200).send(users);
-  }
-  return res.send('invalid Token');
 };
 
 exports.ShowParticularUser = async (req, res) => {
@@ -92,7 +80,7 @@ exports.ShowParticularUser = async (req, res) => {
 
     const decodedToken = jwt.verify(req.headers.authorization, process.env.TOKENSECRET);
 
-    const user = await User.find({ _id: decodedToken._id });
+    const user = await userServices.ShowUsers(decodedToken);
     return res.status(200).send(user);
   } catch (err) {
     return res.status(400).send('something went wrong');
@@ -106,7 +94,7 @@ exports.Update = async (req, res) => {
 
     const decodedToken = jwt.verify(req.headers.authorization, process.env.TOKENSECRET);
 
-    const updatedUser = await UserServices.updateUser(req, res, decodedToken);
+    const updatedUser = await userServices.UpdateUser(req, res, decodedToken);
 
     return res.status(200).send(`updated user : ${updatedUser}`);
   } catch (error) {
@@ -119,16 +107,10 @@ exports.UserActivity = async (req, res) => {
     const date = new Date();
     const dt = date.setDate(date.getDate() - process.env.INACTIVEDAYS);
 
-    await UserActivity
+    const activeUser = userServices.ActiveUser(dt);
 
-      .find({ loginDate: { $lt: dt } })
-
-      .populate('users')
-
-      .exec();
-
-    return res.status(200);
+    return res.status(200).send(activeUser);
   } catch (error) {
-    return res.status(400).send(error);
+    return res.status(400).send('something went wrong');
   }
 };
