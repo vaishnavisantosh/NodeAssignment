@@ -1,13 +1,11 @@
-/* eslint-disable import/no-named-as-default-member */
-/* eslint-disable import/no-named-as-default */
-/* eslint-disable import/named */
+
 /* eslint-disable max-len */
 /* eslint-disable no-underscore-dangle */
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import User from '../model/User.model';
-import { loginValidation, registrationValidation } from '../lib/validator';
+import validator from '../lib/validator';
 import UserServices from '../lib/userServices';
 
 const userServices = new UserServices();
@@ -15,7 +13,7 @@ dotenv.config({ path: './.env' });
 
 exports.SignUp = async (req, res) => {
   try {
-    const { error } = registrationValidation(req.body);
+    const { error } = validator.registrationValidation(req.body);
     const emailExists = await User.findOne({ email: req.body.email });
     if (emailExists) return res.status(400).send('email already exists!!');
     if (error) return res.status(400).send(error.details[0].message);
@@ -40,7 +38,7 @@ exports.SignUp = async (req, res) => {
 exports.SignIn = async (req, res) => {
   try {
     // let isAdmin;
-    const { error } = loginValidation(req.body);
+    const { error } = validator.loginValidation(req.body);
     if (error) return res.status(400).send(error.details[0].message);
     const user = await User.findOne({ email: req.body.email });
     if (!user) return res.status(400).send('email not found');
