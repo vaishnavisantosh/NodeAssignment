@@ -5,18 +5,15 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import User from '../model/User.model';
-import validator from '../lib/validator';
 import UserServices from '../lib/userServices';
 
-const userServices = new UserServices();
 dotenv.config({ path: './.env' });
 
-exports.SignUp = async (req, res) => {
+class Controller {
+signUp = async (req, res) => {
   try {
-    const { error } = validator.registrationValidation(req.body);
     const emailExists = await User.findOne({ email: req.body.email });
     if (emailExists) return res.status(400).send('email already exists!!');
-    if (error) return res.status(400).send(error.details[0].message);
 
     const salt = bcrypt.genSaltSync(10);
     const encryptedPass = bcrypt.hashSync(req.body.password, salt);
@@ -35,11 +32,8 @@ exports.SignUp = async (req, res) => {
   }
 };
 
-exports.SignIn = async (req, res) => {
+signIn = async (req, res) => {
   try {
-    // let isAdmin;
-    const { error } = validator.loginValidation(req.body);
-    if (error) return res.status(400).send(error.details[0].message);
     const user = await User.findOne({ email: req.body.email });
     if (!user) return res.status(400).send('email not found');
 
@@ -48,7 +42,7 @@ exports.SignIn = async (req, res) => {
 
     const isAdmin = user && user.firstName === 'admin' ? 1 : 0;
 
-    const loggedUser = await userServices.SaveLoggedInUser(req, res, user);
+    const loggedUser = await UserServices.saveLoggedInUser(req, res, user);
 
     const token = jwt.sign({ _id: user._id, admin: isAdmin }, process.env.TOKENSECRET);
     res.header('authentication-token', token);
@@ -58,41 +52,27 @@ exports.SignIn = async (req, res) => {
   }
 };
 
-exports.ShowAllUser = async (req, res) => {
+showAllUser = async (req, res) => {
   try {
-    const token = req.headers.authorization;
-    if (!token) return res.status(401).send('Access denied');
-
-    const decodedToken = jwt.verify(req.headers.authorization, process.env.TOKENSECRET);
-    const users = await userServices.ShowUsers(req, res, decodedToken);
+    const users = await UserServices.showUsers(req);
     return res.status(200).send(users);
   } catch (err) {
-    return res.send('invalid Token');
+    return res.send('somthing ');
   }
 };
 
-exports.ShowParticularUser = async (req, res) => {
+showParticularUser = async (req, res) => {
   try {
-    const token = req.headers.authorization;
-    if (!token) return res.status(401).send('Access denied');
-
-    const decodedToken = jwt.verify(req.headers.authorization, process.env.TOKENSECRET);
-
-    const user = await userServices.ShowUsers(decodedToken);
+    const user = await UserServices.showUsers(req);
     return res.status(200).send(user);
   } catch (err) {
     return res.status(400).send('something went wrong');
   }
 };
 
-exports.Update = async (req, res) => {
+update = async (req, res) => {
   try {
-    const token = req.headers.authorization;
-    if (!token) return res.status(401).send('Access denied');
-
-    const decodedToken = jwt.verify(req.headers.authorization, process.env.TOKENSECRET);
-
-    const updatedUser = await userServices.UpdateUser(req, res, decodedToken);
+    const updatedUser = await UserServices.updateUser(req, res);
 
     return res.status(200).send(`updated user : ${updatedUser}`);
   } catch (error) {
@@ -100,15 +80,18 @@ exports.Update = async (req, res) => {
   }
 };
 
-exports.UserActivity = async (req, res) => {
+userActivity = async (req, res) => {
   try {
     const date = new Date();
     const dt = date.setDate(date.getDate() - process.env.INACTIVEDAYS);
 
-    const activeUser = userServices.ActiveUser(dt);
+    const activeUser = UserServices.activeUser(dt);
 
     return res.status(200).send(activeUser);
   } catch (error) {
     return res.status(400).send('something went wrong');
   }
 };
+}
+
+export default new Controller();

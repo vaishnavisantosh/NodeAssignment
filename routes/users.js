@@ -1,17 +1,18 @@
 
 /* eslint-disable no-underscore-dangle */
-import dotenv from 'dotenv';
+
 import express from 'express';
-import controllers from '../controller/users.controller';
+import Controllers from '../controller/users.controller';
+import Validations from '../middleware/validation';
+import Authentication from '../middleware/authentication';
 
 const router = express.Router();
-dotenv.config({ path: './.env' });
 
-router.post('/register', controllers.SignUp);
-router.post('/login', controllers.SignIn);
-router.get('/dashboard', controllers.ShowAllUser);
-router.get('/dashboard/:id', controllers.ShowParticularUser);
-router.put('/users/:id', controllers.Update);
-router.get('/useractivity', controllers.UserActivity);
+router.post('/register', Validations.registrationValidation, Controllers.signUp);
+router.post('/login', Validations.loginValidation, Controllers.signIn);
+router.get('/dashboard', Authentication.auth, Controllers.showAllUser);
+router.get('/dashboard/:id', Authentication.auth, Controllers.showParticularUser);
+router.put('/users/:id', Authentication.auth, Controllers.update);
+router.get('/useractivity', Controllers.userActivity);
 
 module.exports = router;
